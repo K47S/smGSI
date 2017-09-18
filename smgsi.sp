@@ -76,14 +76,18 @@ public void OnPluginEnd() {
   
 }
 
-public Action Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast) {
-	char weapon[32];
-	event.GetString("weapon", weapon, sizeof(weapon));
-	int userid = event.GetInt("userid");
-	int attacker = event.GetInt("attacker");
-	int assister = event.GetInt("assister");    
-	bool isHeadshot = event.GetBool("headshot");
-	int isPenetrated = event.GetInt("penetrated");
+public Action Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast) {	
+	
+	int attacker = event.GetInt("attacker");	
+	if( ( IsClientInGame( attacker ) && IsClientConnected( attacker ) ) && !IsFakeClient( attacker ) ) {
+    		char weapon[32];
+		event.GetString("weapon", weapon, sizeof(weapon));
+		int killedClient = event.GetInt("userid");
+    		int assister = event.GetInt("assister");    
+		bool isHeadshot = event.GetBool("headshot");
+		int isPenetrated = event.GetInt("penetrated");  
+		//TODO send Request
+   	}
 }
 
 public void RequestSteamId(userId, const char[] steamId) {
@@ -118,3 +122,8 @@ public int OnSteamWorksHTTPComplete(Handle hRequest, bool bFailure, bool bReques
 	}
 	delete hRequest;
 }
+
+
+
+
+
