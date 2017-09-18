@@ -87,13 +87,21 @@ public Action Event_PlayerDeath(Event event, const char[] name, bool dontBroadca
 		bool isHeadshot = event.GetBool("headshot");
 		int isPenetrated = event.GetInt("penetrated");  
 		//TODO send Request
+		
+		KeyValues kv = new KeyValues("PostParams");
+		kv.SetString("attacker", attacker);
+		kv.SetString("weapon", weapon);
+		kv.SetString("killedClient", killedClient);
+		kv.SetString("assister", assister);
+		kv.SetString("isHeadshot", isHeadshot);
+		kv.SetString("isPenetrated", isPenetrated);
+		PostRequest(kv);
    	}
 }
 
-public void RequestSteamId(userId, const char[] steamId) {
+public void PostRequest(KeyValues kv) {
 	// Create params
 	char sRedirect[] = "http://localhost:3000/";
-	
 	
 	Handle hRequest = SteamWorks_CreateHTTPRequest(k_EHTTPMethodPOST, sRedirect);
 	if(hRequest == INVALID_HANDLE) {
@@ -102,13 +110,29 @@ public void RequestSteamId(userId, const char[] steamId) {
 	}
 	SteamWorks_SetHTTPRequestHeaderValue(hRequest, "Pragma", "no-cache");
 	SteamWorks_SetHTTPRequestHeaderValue(hRequest, "Cache-Control", "no-cache");
-	//SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "a", sAccount);
-	//SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "g", sGame);
-	//SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "id", steamId);
-	
+
+	do
+	{		
+		if (kv.GetDataType(NULL_STRING) != KvData_None)
+		{
+			char keyName[255];
+			kv.GetSectionName(keyName, sizeof(keyName));
+			
+			char keyValue[255];
+			kv.GetString(NULL_STRING, keyValue, sizeof(keyValue));
+			
+			SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, keyName, keyValue);
+		}
+		else
+		{
+			// Found an empty sub section. It can be handled here if necessary.
+		}		
+	} while (kv.GotoNextKey(false));
+
 	SteamWorks_SetHTTPCallbacks(hRequest, OnSteamWorksHTTPComplete);
-	//SteamWorks_SetHTTPRequestContextValue(hRequest, userId);
 	SteamWorks_SendHTTPRequest(hRequest);
+	
+	delete kv;
 }
 
 
