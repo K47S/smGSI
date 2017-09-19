@@ -79,6 +79,7 @@ public void OnPluginStart() {
 	
 	PrintToServer("Send keep alive.");
 	KeyValues kv = new KeyValues("PostParams");
+	kv.SetString("weapon", "Plugin Started");
 	PostRequest(kv, "keepAlive");
 	PrintToServer("Keep alive send");
 	
@@ -91,39 +92,55 @@ public void OnPluginEnd() {
 public Action Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast) {	
 	
 	int attacker = event.GetInt("attacker");	
-	if( ( IsClientInGame( attacker ) && IsClientConnected( attacker ) ) && !IsFakeClient( attacker ) ) {
-    		char weapon[32];
+	if(IsClientInGame(attacker) && IsClientConnected(attacker) && !IsFakeClient(attacker)) 
+	{
+    	char weapon[32];
 		event.GetString("weapon", weapon, sizeof(weapon));
-		int killedClient = event.GetInt("userid");
-    		int assister = event.GetInt("assister");    
-		bool isHeadshot = event.GetBool("headshot");
-		int isPenetrated = event.GetInt("penetrated");  
-		//TODO send Request
-		
+		//int killedClient = event.GetInt("userid");
+    	//int assister = event.GetInt("assister");    
+		//bool isHeadshot = event.GetBool("headshot");
+		//int isPenetrated = event.GetInt("penetrated");  
+	
 		KeyValues kv = new KeyValues("PostParams");
-		kv.SetString("attacker", attacker);
+		//kv.SetString("attacker", attacker);
 		kv.SetString("weapon", weapon);
-		kv.SetString("killedClient", killedClient);
-		kv.SetString("assister", assister);
-		kv.SetString("isHeadshot", isHeadshot);
-		kv.SetString("isPenetrated", isPenetrated);
-		PostRequest(kv);
+		//kv.SetString("killedClient", killedClient);
+		//kv.SetString("assister", assister);
+		//kv.SetString("isHeadshot", isHeadshot);
+		//kv.SetString("isPenetrated", isPenetrated);
+		PostRequest(kv, "playerKilled");
    	}
 }
 
 public void PostRequest(KeyValues kv, char[] eventName) {
 	// Create params
-	char sRedirect[] = "http://localhost:3000/";
+	char sRedirect[] = "http://localhost:3000/api/GameEvent";
+	
+	PrintToServer("%s", sRedirect);
 	
 	Handle hRequest = SteamWorks_CreateHTTPRequest(k_EHTTPMethodPOST, sRedirect);
 	if(hRequest == INVALID_HANDLE) {
 		LogError("ERROR hRequest(%i): %s", hRequest, sRedirect);
 		return;
 	}
+
 	SteamWorks_SetHTTPRequestHeaderValue(hRequest, "Pragma", "no-cache");
 	SteamWorks_SetHTTPRequestHeaderValue(hRequest, "Cache-Control", "no-cache");
 
-	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "event", eventName);
+	//SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "event", eventName);
+	
+	char stringJson[1];
+	stringJson[0] = '\0';
+	
+	char cBuffer[16384];
+	FormatEx(cBuffer, sizeof(cBuffer), "%s{\"eventName\" : \"%s\" }", stringJson, eventName);
+
+	PrintToServer("%s", cBuffer);
+	
+	SteamWorks_SetHTTPRequestRawPostBody(hRequest, "application/json", cBuffer, sizeof(cBuffer));
+
+	kv.GotoFirstSubKey(false);
+	
 	do
 	{		
 		if (kv.GetDataType(NULL_STRING) != KvData_None)
@@ -134,7 +151,9 @@ public void PostRequest(KeyValues kv, char[] eventName) {
 			char keyValue[255];
 			kv.GetString(NULL_STRING, keyValue, sizeof(keyValue));
 			
-			SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, keyName, keyValue);
+			PrintToServer("KV: %s %s", keyName, keyValue);
+			
+			//SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, keyName, keyValue);
 		}
 		else
 		{
