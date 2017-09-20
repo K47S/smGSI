@@ -5,6 +5,7 @@
 #include <sdkhooks>
 #include <cstrike>
 #include <SteamWorks>
+#include <SMJansson>
 
 #define PLUGIN_VERSION "0.0.1"
 #define FORMAT_VERSION "0.0.2"
@@ -25,7 +26,7 @@ public void OnPluginStart() {
 	//  mp_restartgame.AddChangeHook(OnRestartGameChange);
 	//}
 	PrintToServer("Cvars hooked.");
-
+	
 	// Commands
 	//AddCommandListener(OnPlayerChat, "say");
 	//AddCommandListener(OnPlayerChatTeam, "say_team");
@@ -78,11 +79,10 @@ public void OnPluginStart() {
 	PrintToServer("Generic Events hooked.");
 	
 	PrintToServer("Send keep alive.");
-	KeyValues kv = new KeyValues("PostParams");
-	kv.SetString("weapon", "Plugin Started");
-	PostRequest(kv, "keepAlive");
-	PrintToServer("Keep alive send");
-	
+	new Handle:hObj = json_object();
+	json_object_set_new(hObj, "weapon", json_string("test"));
+	PostRequest(hObj, "keepAlive");
+	PrintToServer("Keep alive send");	
 }
 
 public void OnPluginEnd() {
@@ -94,77 +94,62 @@ public Action Event_PlayerDeath(Event event, const char[] name, bool dontBroadca
 	int attacker = event.GetInt("attacker");	
 	if(IsClientInGame(attacker) && IsClientConnected(attacker) && !IsFakeClient(attacker)) 
 	{
-    	char weapon[32];
+    		char weapon[32];
 		event.GetString("weapon", weapon, sizeof(weapon));
-		//int killedClient = event.GetInt("userid");
-    	//int assister = event.GetInt("assister");    
-		//bool isHeadshot = event.GetBool("headshot");
-		//int isPenetrated = event.GetInt("penetrated");  
-	
-		KeyValues kv = new KeyValues("PostParams");
-		//kv.SetString("attacker", attacker);
-		kv.SetString("weapon", weapon);
-		//kv.SetString("killedClient", killedClient);
-		//kv.SetString("assister", assister);
-		//kv.SetString("isHeadshot", isHeadshot);
-		//kv.SetString("isPenetrated", isPenetrated);
-		PostRequest(kv, "playerKilled");
-   	}
-}
-
-public void PostRequest(KeyValues kv, char[] eventName) {
-	// Create params
-	char sRedirect[] = "http://localhost:3000/api/GameEvent";
-	
-	PrintToServer("%s", sRedirect);
-	
-	Handle hRequest = SteamWorks_CreateHTTPRequest(k_EHTTPMethodPOST, sRedirect);
-	if(hRequest == INVALID_HANDLE) {
-		LogError("ERROR hRequest(%i): %s", hRequest, sRedirect);
-		return;
-	}
-
-	SteamWorks_SetHTTPRequestHeaderValue(hRequest, "Pragma", "no-cache");
-	SteamWorks_SetHTTPRequestHeaderValue(hRequest, "Cache-Control", "no-cache");
-
-	//SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "event", eventName);
-	
-	char stringJson[1];
-	stringJson[0] = '\0';
-	
-	char cBuffer[16384];
-	FormatEx(cBuffer, sizeof(cBuffer), "%s{\"eventName\" : \"%s\" }", stringJson, eventName);
-
-	PrintToServer("%s", cBuffer);
-	
-	SteamWorks_SetHTTPRequestRawPostBody(hRequest, "application/json", cBuffer, sizeof(cBuffer));
-
-	kv.GotoFirstSubKey(false);
-	
-	do
-	{		
-		if (kv.GetDataType(NULL_STRING) != KvData_None)
+		int killedClient = event.GetInt("userid");
+    		int assister = event.GetInt("assister");    
+		bool isHeadshot = event.GetBool("headshot");
+		int isPenetrated = event.GetInt("penetrated");  
+		
+        	new Handle:hObj = json_object();
+        	
+        	json_object_set_new(hObj, "weapon", json_string(weapon));
+		json_object_set_new(hObj, "killedClient", json_integer(killedClient));
+        	json_object_set_new(hObj, "assister", json_integer(assister));
+		json_object_set_new(hObj, "isPenetrated", json_integer(isPenetrated));
+		if(isHeadshot == true)
 		{
-			char keyName[255];
-			kv.GetSectionName(keyName, sizeof(keyName));
-			
-			char keyValue[255];
-			kv.GetString(NULL_STRING, keyValue, sizeof(keyValue));
-			
-			PrintToServer("KV: %s %s", keyName, keyValue);
-			
-			//SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, keyName, keyValue);
+			json_object_set_new(hObj, "isHeadshot", json_true());
 		}
 		else
 		{
-			// Found an empty sub section. It can be handled here if necessary.
+			json_object_set_new(hObj, "isHeadshot", json_false());
 		}		
-	} while (kv.GotoNextKey(false));
+		PostRequest(hObj, "playerKilled");
+   	}
+}
 
+public void PostRequest(Handle hJson, char[] eventName) {
+	
+	//Check if json handle is valid
+	if(hJson == INVALID_HANDLE)
+	{
+		LogError("ERROR hJson(%i) is invalid handle.", hJson);
+		return;
+	}
+	
+	//Transform the JSON object to a JSON string
+        new String:sJSON[16384];
+        json_dump(hJson, sJSON, sizeof(sJSON));
+		
+	//TODO Move to AutoConfig
+	char sRedirect[] = "http://localhost:3000/api/GameEvent";	
+	
+	//Send HTTP request
+	Handle hRequest = SteamWorks_CreateHTTPRequest(k_EHTTPMethodPOST, sRedirect);	
+	if(hRequest == INVALID_HANDLE) {
+		LogError("ERROR hRequest(%i): %s", hRequest, sRedirect);
+		CloseHandle(hJson);
+		return;
+	}
+	SteamWorks_SetHTTPRequestHeaderValue(hRequest, "Pragma", "no-cache");
+	SteamWorks_SetHTTPRequestHeaderValue(hRequest, "Cache-Control", "no-cache");
+	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "event", eventName);
+	SteamWorks_SetHTTPRequestRawPostBody(hRequest, "application/json", sJSON, sizeof(sJSON));
 	SteamWorks_SetHTTPCallbacks(hRequest, OnSteamWorksHTTPComplete);
 	SteamWorks_SendHTTPRequest(hRequest);
 	
-	delete kv;
+	CloseHandle(hJson);
 }
 
 public int OnSteamWorksHTTPComplete(Handle hRequest, bool bFailure, bool bRequestSuccessful, EHTTPStatusCode eStatusCode, any data) {	
