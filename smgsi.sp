@@ -5,7 +5,7 @@
 #include <sdkhooks>
 #include <cstrike>
 #include <SteamWorks>
-#include <SMJansson>
+#include <smjansson>
 
 #define PLUGIN_VERSION "0.0.1"
 #define FORMAT_VERSION "0.0.2"
@@ -154,7 +154,7 @@ public void PostRequest(Handle hJson, char[] eventName) {
 
 public int OnSteamWorksHTTPComplete(Handle hRequest, bool bFailure, bool bRequestSuccessful, EHTTPStatusCode eStatusCode, any data) {	
 	
-	if (!bRequestSuccessful && !eStatusCode == k_EHTTPStatusCode200OK) 
+	if (!bRequestSuccessful && eStatusCode != k_EHTTPStatusCode200OK)
 	{	
 		char sError[256];
 		FormatEx(sError, sizeof(sError), "SteamWorks error (status code %i). Request successful: %s", _:eStatusCode, bRequestSuccessful ? "True" : "False");
