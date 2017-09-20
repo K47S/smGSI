@@ -38,9 +38,9 @@ public void OnPluginStart() {
 	//HookEvent("item_purchase", Event_ItemPurchase);
 	//HookEvent("bomb_beginplant", Event_BombBeginPlant);
 	//HookEvent("bomb_abortplant", Event_BombAbortPlant);
-	//HookEvent("bomb_planted", Event_BombPlanted);
-	//HookEvent("bomb_defused", Event_BombDefused);
-	//HookEvent("bomb_exploded", Event_BombExploded);
+	HookEvent("bomb_planted", Event_BombPlanted);
+	HookEvent("bomb_defused", Event_BombDefused);
+	HookEvent("bomb_exploded", Event_BombExploded);
 	//HookEvent("bomb_dropped", Event_BombDropped);
 	//HookEvent("bomb_pickup", Event_BombPickup);
 	//HookEvent("defuser_dropped", Event_DefuserDropped);
@@ -62,7 +62,7 @@ public void OnPluginStart() {
 	//HookEvent("cs_win_panel_match", Event_WinPanelMatch);
 	//HookEvent("round_start", Event_RoundStart);
 	//HookEvent("round_end", Event_RoundEnd);
-	//HookEvent("round_mvp", Event_RoundMvp);
+	HookEvent("round_mvp", Event_RoundMvp);
 	//HookEvent("player_blind", Event_PlayerBlind);
 	//HookEvent("player_falldamage", Event_PlayerFallDamage);
 	//HookEvent("inspect_weapon", Event_InspectWeapon);
@@ -77,12 +77,6 @@ public void OnPluginStart() {
 	//HookEvent("team_info", Event_TeamInfo);
 	//HookEvent("team_score", Event_TeamScore);
 	PrintToServer("Generic Events hooked.");
-	
-	PrintToServer("Send keep alive.");
-	new Handle:hObj = json_object();
-	json_object_set_new(hObj, "weapon", json_string("test"));
-	PostRequest(hObj, "keepAlive");
-	PrintToServer("Keep alive send");	
 }
 
 public void OnPluginEnd() {
@@ -91,22 +85,51 @@ public void OnPluginEnd() {
 
 public Action Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast) {	
 	
-	int attacker = event.GetInt("attacker");	
-	if(IsClientInGame(attacker) && IsClientConnected(attacker) && !IsFakeClient(attacker)) 
+	int attackerUserId = event.GetInt("attacker");		
+	int attackerClientId = GetClientOfUserId(attackerUserId); 
+	
+	//Only check if attacker is not a bot
+	if(attackerClientId > 0 && IsClientInGame(attackerClientId) && IsClientConnected(attackerClientId) && !IsFakeClient(attackerClientId)) 
 	{
-    		char weapon[32];
+		int attackerSteamId = GetSteamAccountID(attackerClientId, false);
+		decl String:attackerName[64]; 	 	
+		GetClientName(attackerClientId, attackerName, sizeof(attackerName));
+	
+		new Handle:hObj = json_object(); 
+		json_object_set_new(hObj, "Name", json_string(attackerName));
+		json_object_set_new(hObj, "SteamId", json_integer(attackerSteamId));
+		
+		
+		int victimUserId = event.GetInt("userid");
+		int victimClientId = GetClientOfUserId(victimUserId);
+		if(victimClientId > 0)
+		{
+			int victimSteamId = GetSteamAccountID(victimClientId, false);
+			decl String:victimName[64]; 	 	
+			GetClientName(victimClientId, victimName, sizeof(victimName));
+		
+			json_object_set_new(hObj, "victim", json_string(victimName));
+			json_object_set_new(hObj, "victimSteamId", json_integer(victimSteamId));
+		}
+		
+		int assisterUserId = event.GetInt("assister");  
+		int assisterClientId = GetClientOfUserId(assisterUserId);
+		if(assisterClientId > 0)
+		{
+			int assisterSteamId = GetSteamAccountID(assisterClientId, false);
+			decl String:assisterName[64]; 	 	
+			GetClientName(assisterClientId, assisterName, sizeof(assisterName));
+			json_object_set_new(hObj, "assister", json_string(assisterName));
+			json_object_set_new(hObj, "assisterSteamId", json_integer(assisterSteamId));	
+		}
+		
+		char weapon[32];
 		event.GetString("weapon", weapon, sizeof(weapon));
-		int killedClient = event.GetInt("userid");
-    		int assister = event.GetInt("assister");    
+		
 		bool isHeadshot = event.GetBool("headshot");
 		int isPenetrated = event.GetInt("penetrated");  
-		
-        	new Handle:hObj = json_object();
-        	
-        	json_object_set_new(hObj, "weapon", json_string(weapon));
-		json_object_set_new(hObj, "killedClient", json_integer(killedClient));
-        	json_object_set_new(hObj, "assister", json_integer(assister));
-		json_object_set_new(hObj, "isPenetrated", json_integer(isPenetrated));
+
+		json_object_set_new(hObj, "weapon", json_string(weapon));
 		if(isHeadshot == true)
 		{
 			json_object_set_new(hObj, "isHeadshot", json_true());
@@ -114,12 +137,73 @@ public Action Event_PlayerDeath(Event event, const char[] name, bool dontBroadca
 		else
 		{
 			json_object_set_new(hObj, "isHeadshot", json_false());
+		}
+		
+		if(isPenetrated > 0)
+		{
+			json_object_set_new(hObj, "isPenetrated", json_true());
+		}
+		else
+		{
+			json_object_set_new(hObj, "isPenetrated", json_false());
+		}
+		
+		if(attackerClientId > 0  && victimClientId > 0 && GetClientTeam(attackerClientId) == GetClientTeam(victimClientId))
+		{
+			json_object_set_new(hObj, "isTeamkill", json_true());
+		}
+		else
+		{
+			json_object_set_new(hObj, "isTeamkill", json_false());
 		}		
-		PostRequest(hObj, "playerKilled");
+		PostRequest(hObj, name);
    	}
 }
 
-public void PostRequest(Handle hJson, char[] eventName) {
+
+public Action Event_BombPlanted(Event event, const char[] name, bool dontBroadcast) {	
+	SendUserIdEvent(event, name, "Name", "SteamId");	
+}	
+
+public Action Event_BombDefused(Event event, const char[] name, bool dontBroadcast) {	
+	SendUserIdEvent(event, name, "Name", "SteamId");
+}	
+
+public Action Event_BombExploded(Event event, const char[] name, bool dontBroadcast) {	
+	SendUserIdEvent(event, name, "Name", "SteamId");	
+}
+
+public Action Event_RoundMvp(Event event, const char[] name, bool dontBroadcast) {	
+	SendUserIdEvent(event, name, "Name", "SteamId");	
+}
+	
+	
+public void SendUserIdEvent(Event event, const char[] name, const char[] playerNameColumn, const char[] playerSteamIdColumn)
+{
+	int userId = event.GetInt("userId");		
+	int userClientId = GetClientOfUserId(userId); 
+	
+	if(IsRealPlayer(userClientId)) 
+	{
+		int userSteamId = GetSteamAccountID(userClientId, false);
+		decl String:userName[64]; 	 	
+		GetClientName(userClientId, userName, sizeof(userName));
+		
+		new Handle:hObj = json_object();        	
+		json_object_set_new(hObj, playerNameColumn, json_string(userName));
+		json_object_set_new(hObj, playerSteamIdColumn, json_integer(userSteamId));
+		PostRequest(hObj, name);
+	}
+}
+
+
+public void PostRequest(Handle hJson, const char[] eventName) {
+	
+	//Do not log in warmup
+	if(GameRules_GetProp("m_bWarmupPeriod") == 1)
+	{
+		return;		
+	}
 	
 	//Check if json handle is valid
 	if(hJson == INVALID_HANDLE)
@@ -128,10 +212,12 @@ public void PostRequest(Handle hJson, char[] eventName) {
 		return;
 	}
 	
+	json_object_set_new(hJson, "eventName", json_string(eventName));
+	
 	//Transform the JSON object to a JSON string
-        new String:sJSON[16384];
-        json_dump(hJson, sJSON, sizeof(sJSON));
-		
+	new String:sJSON[16384];
+	json_dump(hJson, sJSON, sizeof(sJSON));
+
 	//TODO Move to AutoConfig
 	char sRedirect[] = "http://localhost:3000/api/GameEvent";	
 	
@@ -144,7 +230,7 @@ public void PostRequest(Handle hJson, char[] eventName) {
 	}
 	SteamWorks_SetHTTPRequestHeaderValue(hRequest, "Pragma", "no-cache");
 	SteamWorks_SetHTTPRequestHeaderValue(hRequest, "Cache-Control", "no-cache");
-	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "event", eventName);
+
 	SteamWorks_SetHTTPRequestRawPostBody(hRequest, "application/json", sJSON, sizeof(sJSON));
 	SteamWorks_SetHTTPCallbacks(hRequest, OnSteamWorksHTTPComplete);
 	SteamWorks_SendHTTPRequest(hRequest);
@@ -162,3 +248,16 @@ public int OnSteamWorksHTTPComplete(Handle hRequest, bool bFailure, bool bReques
 	}
 	delete hRequest;
 }
+
+public bool IsRealPlayer(client)
+{
+	if(IsClientInGame(client) && IsClientConnected(client) && !IsFakeClient(client))
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}	
+}
+
