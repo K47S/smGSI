@@ -10,15 +10,23 @@
 #define PLUGIN_VERSION "0.0.1"
 #define FORMAT_VERSION "0.0.2"
 
+new Handle:PostUrl = INVALID_HANDLE;
+
 public Plugin myinfo = {
-  name = "sourcemodgsi",
+  name = "smGSI",
   author = "k47s",
   description = "Logs events to a webapi"
 };
 
+
+
 public void OnPluginStart() {
 	
 	PrintToServer("Plugin Started");
+	
+	PrintToServer("Create config and ConVar");
+	PostUrl = CreateConVar("smGSI_PostUrl", "http://localhost:3000/api/GameEvent", "The Url the events will be posted to.");
+	AutoExecConfig(true, "smGSI");
 	
 	// Hook CVars
 	//mp_restartgame = FindConVar("mp_restartgame");
@@ -197,8 +205,7 @@ public void SendUserIdEvent(Event event, const char[] name, const char[] playerN
 }
 
 
-public void PostRequest(Handle hJson, const char[] eventName) {
-	
+public void PostRequest(Handle hJson, const char[] eventName) {						
 	//Do not log in warmup
 	if(GameRules_GetProp("m_bWarmupPeriod") == 1)
 	{
@@ -218,13 +225,17 @@ public void PostRequest(Handle hJson, const char[] eventName) {
 	new String:sJSON[16384];
 	json_dump(hJson, sJSON, sizeof(sJSON));
 
-	//TODO Move to AutoConfig
-	char sRedirect[] = "http://localhost:3000/api/GameEvent";	
-	
+	if(PostUrl == INVALID_HANDLE)
+	{
+		return;
+	}
+	char sPostUrl[512];
+	GetConVarString(PostUrl, sPostUrl, sizeof(sPostUrl));
+
 	//Send HTTP request
-	Handle hRequest = SteamWorks_CreateHTTPRequest(k_EHTTPMethodPOST, sRedirect);	
+	Handle hRequest = SteamWorks_CreateHTTPRequest(k_EHTTPMethodPOST, sPostUrl);	
 	if(hRequest == INVALID_HANDLE) {
-		LogError("ERROR hRequest(%i): %s", hRequest, sRedirect);
+		LogError("ERROR hRequest(%i): %s", hRequest, sPostUrl);
 		CloseHandle(hJson);
 		return;
 	}
