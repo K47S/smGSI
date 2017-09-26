@@ -11,6 +11,7 @@
 #define FORMAT_VERSION "0.0.2"
 
 new Handle:PostUrl = INVALID_HANDLE;
+EngineVersion cEngineVersion;
 
 public Plugin myinfo = {
   name = "smGSI",
@@ -23,6 +24,9 @@ public Plugin myinfo = {
 public void OnPluginStart() {
 	
 	PrintToServer("Plugin Started");
+	
+	PrintToServer("Determine engine version");
+	cEngineVersion = GetEngineVersion();
 	
 	PrintToServer("Create config and ConVar");
 	PostUrl = CreateConVar("smGSI_PostUrl", "http://localhost:3000/api/GameEvent", "The Url the events will be posted to.");
@@ -219,8 +223,16 @@ public void PostRequest(Handle hJson, const char[] eventName) {
 		return;
 	}
 	
-	json_object_set_new(hJson, "eventName", json_string(eventName));
+	json_object_set_new(hJson, "event", json_string(eventName));
 	
+	switch (g_EngineVersion)
+	{
+		case Engine_CSGO:
+		{
+			json_object_set_new(hJson, "game", json_string("csgo"));
+		}
+	}
+
 	//Transform the JSON object to a JSON string
 	new String:sJSON[16384];
 	json_dump(hJson, sJSON, sizeof(sJSON));
