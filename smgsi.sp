@@ -254,7 +254,7 @@ public void PostRequest(Handle hJson, const char[] eventName) {
 	SteamWorks_SetHTTPRequestHeaderValue(hRequest, "Pragma", "no-cache");
 	SteamWorks_SetHTTPRequestHeaderValue(hRequest, "Cache-Control", "no-cache");
 
-	SteamWorks_SetHTTPRequestRawPostBody(hRequest, "application/json", sJSON, sizeof(sJSON));
+	SteamWorks_SetHTTPRequestRawPostBody(hRequest, "application/json", sJSON, strlen(sJSON));
 	SteamWorks_SetHTTPCallbacks(hRequest, OnSteamWorksHTTPComplete);
 	SteamWorks_SendHTTPRequest(hRequest);
 	
