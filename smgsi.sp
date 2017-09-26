@@ -225,7 +225,7 @@ public void PostRequest(Handle hJson, const char[] eventName) {
 	
 	json_object_set_new(hJson, "event", json_string(eventName));
 	
-	switch (g_EngineVersion)
+	switch (cEngineVersion)
 	{
 		case Engine_CSGO:
 		{
