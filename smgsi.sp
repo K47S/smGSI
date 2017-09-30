@@ -108,8 +108,8 @@ public Action Event_PlayerDeath(Event event, const char[] name, bool dontBroadca
 		GetClientName(attackerClientId, attackerName, sizeof(attackerName));
 	
 		new Handle:hObj = json_object(); 
-		json_object_set_new(hObj, "Name", json_string(attackerName));
-		json_object_set_new(hObj, "SteamId", json_integer(attackerSteamId));
+		json_object_set_new(hObj, "name", json_string(attackerName));
+		json_object_set_new(hObj, "steamId", json_integer(attackerSteamId));
 		
 		
 		int victimUserId = event.GetInt("userid");
@@ -174,19 +174,19 @@ public Action Event_PlayerDeath(Event event, const char[] name, bool dontBroadca
 
 
 public Action Event_BombPlanted(Event event, const char[] name, bool dontBroadcast) {	
-	SendUserIdEvent(event, name, "Name", "SteamId");	
+	SendUserIdEvent(event, name, "name", "steamId");	
 }	
 
 public Action Event_BombDefused(Event event, const char[] name, bool dontBroadcast) {	
-	SendUserIdEvent(event, name, "Name", "SteamId");
+	SendUserIdEvent(event, name, "name", "steamId");
 }	
 
 public Action Event_BombExploded(Event event, const char[] name, bool dontBroadcast) {	
-	SendUserIdEvent(event, name, "Name", "SteamId");	
+	SendUserIdEvent(event, name, "name", "steamId");	
 }
 
 public Action Event_RoundMvp(Event event, const char[] name, bool dontBroadcast) {	
-	SendUserIdEvent(event, name, "Name", "SteamId");	
+	SendUserIdEvent(event, name, "name", "steamId");	
 }
 	
 	
