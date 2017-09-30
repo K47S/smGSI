@@ -232,6 +232,8 @@ public void PostRequest(Handle hJson, const char[] eventName) {
 			json_object_set_new(hJson, "game", json_string("csgo"));
 		}
 	}
+	
+	json_object_set_new(hJson, "timestamp", json_integer(GetTime()));
 
 	//Transform the JSON object to a JSON string
 	new String:sJSON[16384];
