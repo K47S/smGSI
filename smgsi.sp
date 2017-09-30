@@ -29,7 +29,7 @@ public void OnPluginStart() {
 	cEngineVersion = GetEngineVersion();
 	
 	PrintToServer("Create config and ConVar");
-	PostUrl = CreateConVar("smGSI_PostUrl", "http://localhost:3000/api/GameEvent", "The Url the events will be posted to.");
+	PostUrl = CreateConVar("smGSI_PostUrl", "http://localhost:3000/api/CsgoScoreboard", "The Url the events will be posted to.");
 	AutoExecConfig(true, "smGSI");
 	
 	// Hook CVars
