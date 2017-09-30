@@ -7,9 +7,6 @@
 #include <SteamWorks>
 #include <smjansson>
 
-#define PLUGIN_VERSION "0.0.1"
-#define FORMAT_VERSION "0.0.2"
-
 new Handle:PostUrl = INVALID_HANDLE;
 EngineVersion cEngineVersion;
 
